@@ -1,2 +1,3 @@
+include ':junit4'
 include ':local_unit_sample'
 rootProject.name = "Test_Learning"
