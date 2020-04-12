@@ -1,6 +1,7 @@
 package com.learn.junit4
 
 import org.hamcrest.CoreMatchers.*
+import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.core.CombinableMatcher
 import org.junit.Assert.*
 import org.junit.Test
