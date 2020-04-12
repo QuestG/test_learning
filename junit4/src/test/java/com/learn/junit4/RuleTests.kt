@@ -1,12 +1,19 @@
 package com.learn.junit4
 
 import org.junit.Assert.*
+import org.junit.AssumptionViolatedException
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.results.PrintableResult.testResult
 import org.junit.experimental.results.ResultMatchers.isSuccessful
 import org.junit.rules.*
+import org.junit.runner.Description
+import org.junit.runner.RunWith
+import org.junit.runners.Suite
+import org.junit.runners.model.Statement
 import java.io.File
+import java.util.logging.Logger
 
 /**
  * @author quest
@@ -153,5 +160,150 @@ class UsesVerifier {
         sequence = ""
         assertThat(testResult(UsesVerifier::class.java), isSuccessful())
         assertEquals("test verify", sequence)
+    }
+}
+
+/**
+ * 从4.9版本开始，TestWatcher代替被废弃的TestWatchman。
+ * TestWatcher实现了TestRule，而TestWatchman实现了MethodRule。
+ *
+ * 不过它们都是测试规则的基类，用来记录测试的步骤，但无法修改。
+ */
+class WatchmanTest {
+    private var watchedLog: String = ""
+
+    @Rule
+    @JvmField
+    val watchman = object : TestWatcher() {
+
+        override fun succeeded(description: Description?) {
+            watchedLog += description?.displayName + " success!\n"
+        }
+
+        override fun failed(e: Throwable?, description: Description?) {
+            watchedLog += description?.displayName + " " + e?.javaClass?.simpleName + "\n"
+        }
+
+        override fun skipped(e: AssumptionViolatedException?, description: Description?) {
+            watchedLog += description?.displayName + " " + e?.javaClass?.simpleName + "\n"
+        }
+
+    }
+
+    @Test
+    fun fails() {
+        fail()
+    }
+
+    @Test
+    fun succeeds() {
+
+    }
+}
+
+/**
+ * TestName的作用就是让当前测试名称在测试方法中可获取。
+ *
+ * 而Timeout和ExpectedException 可以参考HasGlobalTimeout类和ExceptionTests这两个示例。
+ */
+class NameRuleTest {
+    @Rule
+    @JvmField
+    val name = TestName()
+
+    @Test
+    fun testA() {
+        assertEquals("testA", name.methodName)
+    }
+}
+
+/**
+ * 这个类是一个测试套件，它在SuiteClasses包含的所有测试类执行之前，执行server.connect的操作，
+ * 然后在所有测试执行之后，完成server.disconnect()的操作。
+ *
+ * 注解ClassRule扩展了方法级规则的作用范围，可以添加影响整个类的操作的静态字段。
+ * ParentRunner的任何子类，包括BlockJUnit4ClassRunner和Suite，都支持@ClassRule。
+ *
+ */
+@RunWith(Suite::class)
+@Suite.SuiteClasses(NameRuleTest::class)
+class UsesClassRuleTest {
+
+    private val server = UsesExternalResource.Server()
+
+    @ClassRule
+    @JvmField
+    val resource = object : ExternalResource() {
+        override fun before() {
+            super.before()
+            server.connect()
+        }
+
+        override fun after() {
+            super.after()
+            server.disconnect()
+        }
+    }
+}
+
+/**
+ * RuleChain允许对TestRule进行排序
+ * 更多内容看源码吧
+ */
+class UseRuleChain {
+    @Rule
+    @JvmField
+    val chain = RuleChain.outerRule(LoggingRule("outer rule"))
+        .around(LoggingRule("middle rule"))
+        .around(LoggingRule("inner rule"))
+
+    /**
+     * 很多自定义的规则都可以通过扩展ExternalResource规则来实现。
+     * 不过，如果需要知道测试类或方法的更多信息，则需要实现TestRule接口。
+     * 主要优势在于，自定义规则可以使用自定义构造函数，将方法添加到类中以供在测试中使用。
+     * 或者，将Statement嵌套包装形成新的Statement。
+     */
+    class LoggingRule(private val des: String) : TestRule {
+        override fun apply(base: Statement?, description: Description?): Statement {
+            println("des: $des")
+            return base!!
+        }
+    }
+
+    @Test
+    fun example() {
+        assertTrue(true)
+    }
+}
+
+/**
+ * 自定义一个日志输出，每次测试都会有日志输出。
+ */
+class LoggerRule : TestRule {
+
+    private lateinit var logger: Logger
+
+    fun getLogger() = logger
+
+    override fun apply(base: Statement?, description: Description?): Statement {
+        return object : Statement() {
+            override fun evaluate() {
+                logger =
+                    Logger.getLogger(description?.testClass?.name + "." + description?.displayName)
+                base?.evaluate()
+            }
+        }
+    }
+}
+
+class LoggerRuleTest {
+    @Rule
+    @JvmField
+    val logger = LoggerRule()
+
+    @Test
+    fun checkoutLogger() {
+        val log = logger.getLogger()
+        log.warning("your test is showing")
     }
 }
