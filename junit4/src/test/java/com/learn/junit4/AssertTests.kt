@@ -4,7 +4,9 @@ import org.hamcrest.CoreMatchers.*
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.core.CombinableMatcher
 import org.junit.Assert.*
+import org.junit.Assume.assumeThat
 import org.junit.Test
+import java.io.File
 
 /**
  * @author quest
@@ -91,5 +93,17 @@ class AssertTests {
         assertThat("good", anyOf(equalTo("bad"), equalTo("good")))
         assertThat(7, not(CombinableMatcher.either(equalTo(3)).or(equalTo(4))))
         assertThat(Any(), not(sameInstance(Any())))
+    }
+
+    @Test
+    fun fileNameIncludesUsername() {
+        assumeThat(File.separatorChar, `is`('/'))
+        assertThat(User("optimus").configFileName(), `is`("configfiles/optimus.cfg"))
+    }
+
+    class User(private val fileName: String) {
+        fun configFileName(): String {
+            return "configfiles${File.separatorChar}$fileName.cfg"
+        }
     }
 }
