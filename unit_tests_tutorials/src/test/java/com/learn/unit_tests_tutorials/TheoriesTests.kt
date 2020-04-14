@@ -1,4 +1,4 @@
-package com.learn.junit4
+package com.learn.unit_tests_tutorials
 
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.not
