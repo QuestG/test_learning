@@ -105,4 +105,75 @@ class Tutorials {
             it.length == 5
         }
     }
+
+    /**
+     * times、never、atMost、atLeast等关于次数的方法，即VerificationMode
+     */
+    @Test
+    fun sampleVerifyNumber() {
+        val mockedList = mock(mutableListOf<String?>().javaClass)
+        //"once"添加一次
+        mockedList.add("once")
+        //"twice"添加两次
+        mockedList.add("twice")
+        mockedList.add("twice")
+        //"three times"添加三次
+        mockedList.add("three times")
+        mockedList.add("three times")
+        mockedList.add("three times")
+
+        //times(1)默认被调用，这两次的验证逻辑是相同的，都想验证"once"是否被添加一次。
+        verify(mockedList).add("once")
+        verify(mockedList, times(1)).add("once")
+
+        //分别验证mockedList是否添加了两次"twice"和三次"three times"
+        verify(mockedList, times(2)).add("twice")
+        verify(mockedList, times(3)).add("three times")
+
+        verify(mockedList, never()).add("never happened")
+
+        verify(mockedList, atMostOnce()).add("once")
+        verify(mockedList, atMost(5)).add("three times")
+        verify(mockedList, atLeast(2)).add("three times")
+        verify(mockedList, atLeastOnce()).add("three times")
+    }
+
+    @Test
+    fun sampleDoThrow() {
+        val mockedList = mock(mutableListOf<String?>().javaClass)
+        //当mockedList调用clear时，抛出RuntimeException
+        doThrow(RuntimeException()).`when`(mockedList).clear()
+        //模拟实际的调用，抛出异常。
+        mockedList.clear()
+    }
+
+    /**
+     * inOrder方法的使用
+     */
+    @Test
+    fun sampleVerifyInOrder() {
+        //创建一个mock对象，它的方法按照特定的顺序执行
+        val singleMock = mock(mutableListOf<String?>().javaClass)
+
+        singleMock.add("was added first")
+        singleMock.add("was added second")
+
+        //创建一个按照顺序验证的对象
+        val inOrder = inOrder(singleMock)
+
+        //verify验证代码逻辑时，singleMock必须按照原来调用的顺序。所以这里如果方法调换位置，则测试会不通过。
+        inOrder.verify(singleMock).add("was added first")
+        inOrder.verify(singleMock).add("was added second")
+
+        val firstMock = mock(mutableListOf<String?>().javaClass)
+        val secondMock = mock(mutableListOf<String?>().javaClass)
+
+        firstMock.add("was added first")
+        secondMock.add("was added second")
+
+        val inOrder2 = inOrder(firstMock, secondMock)
+
+        inOrder2.verify(firstMock).add("was added first")
+        inOrder2.verify(secondMock).add("was added second")
+    }
 }
