@@ -1,9 +1,12 @@
 package com.learn.unit_tests_tutorials.mockito
 
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.ArgumentMatcher
 import org.mockito.ArgumentMatchers
+import org.mockito.Mock
 import org.mockito.Mockito.*
+import org.mockito.junit.MockitoJUnitRunner
 import java.util.*
 
 /**
@@ -175,5 +178,58 @@ class Tutorials {
 
         inOrder2.verify(firstMock).add("was added first")
         inOrder2.verify(secondMock).add("was added second")
+    }
+
+    /**
+     * 验证某些mocked对象未曾发生过交互
+     */
+    @Test
+    fun sampleVerifyZeoInteractions() {
+        val firstMock = mock(mutableListOf<String?>().javaClass)
+        val secondMock = mock(mutableListOf<String?>().javaClass)
+        val thirdMock = mock(mutableListOf<String?>().javaClass)
+
+        firstMock.add("one")
+
+        verify(firstMock).add("one")
+
+        verify(firstMock, never()).add("two")
+
+        //mockito 3.1之后被废弃，使用verifyNoInteractions代替。
+        verifyZeroInteractions(secondMock, thirdMock)
+        verifyNoInteractions(secondMock, thirdMock)
+    }
+
+    /**
+     * verifyNoMoreInteractions，确保参数对象任何一个调用行为都被验证，但凡有一个未验证，都会导致测试失败。
+     */
+    @Test
+    fun sampleVerifyNoMoreInteract() {
+        val mockedList = mock(mutableListOf<String?>().javaClass)
+
+        mockedList.add("one")
+        mockedList.add("two")
+
+        verify(mockedList).add("one")
+        //这里少验证了add("two")的行为，所以，verifyNoMoreInteractions验证时会测试失败。
+        verifyNoMoreInteractions(mockedList)
+    }
+
+
+    /**
+     * 注解@Mock，必须配合MockitoJUnitRunner才能生效，另外kotlin下，@Mock模拟生成对象，需要通过lateinit声明变量
+     */
+    @RunWith(MockitoJUnitRunner::class)
+    class MockAnnotationTest {
+
+        @Mock
+        private lateinit var mockedList: ArrayList<String>
+
+        @Test
+        fun sample() {
+            mockedList.add("one")
+
+            verify(mockedList).add("one")
+        }
     }
 }
