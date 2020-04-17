@@ -232,4 +232,86 @@ class Tutorials {
             verify(mockedList).add("one")
         }
     }
+
+    /**
+     * stubbing，我理解为当mock对象调用某个方法时，会执行另一个操作。
+     * 有点类似key-value的感觉，执行某个方法的过程作为key，然后对应会执行thenXXX方法。
+     * 而且对于thenXXX方法的返回值类型，范型的类型就是mock对象调用的这个方法的返回类型。
+     *
+     * 比如
+     * ```
+     * `when`(mockedList.add("some arg"))
+     *   .thenReturn(true)
+     * ```
+     * 因为add方法的返回类型是Boolean，所以thenReturn的参数类型只能是Boolean
+     *
+     * 那stubbing的逻辑如何通过源码来实现的呢？
+     *
+     * 而迭代式的stubbing，即stubbing对于方法不同时机的调用，对应的结果是不一样的。
+     * 这里的时机，可能指调用次数，可能指是否连续调用等。可参考本函数的示例。不过这种场景比较少见。
+     */
+    @Test
+    fun sampleIteratorStubbing() {
+        val mockedList = mock(mutableListOf<String?>().javaClass)
+
+        `when`(mockedList.add("hello"))
+//            .thenThrow(RuntimeException())
+            .thenReturn(false)
+            .thenReturn(true)
+
+        //也可以通过可变参数来简化
+//        `when`(mockedList.add("hello"))
+//            .thenReturn(false, true)
+
+        //如果不使用链式调用，那么对于同一个方法或参数的多次stubbing则会使后者stubbing覆盖前者
+//        `when`(mockedList.add("hello"))
+//            .thenReturn(true)
+//        `when`(mockedList.add("hello"))
+//            .thenReturn(false)
+
+        //第一次调用,输出false
+        println(mockedList.add("hello"))
+        //第二次调用，返回true
+        println(mockedList.add("hello"))
+
+        //超过stubbing次数的调用，则返回最后一次stubbing的内容。
+        //这里输出"true"
+        println(mockedList.add("hello"))
+    }
+
+
+    /**
+     * 使用Answer的实现类 进行stubbing
+     *
+     * 一般情况下通过thenReturn和thenThrow就能测试需要测试的代码了。
+     */
+    @Test
+    fun sampleStubbingWithCallback() {
+        val mockedList = mock(mutableListOf<String?>().javaClass)
+
+        `when`(mockedList[0]).thenAnswer {
+            "called with arguments : ${Arrays.toString(it.arguments)}"
+        }
+
+        //打印 "called with arguments: [0]"
+        println(mockedList[0])
+    }
+
+    /**
+     * 对于插桩void方法，需要使用doXXXX。
+     * 如果对同一个方法进行多次插桩测试，在测试过程中更改模拟对行为，也可以使用doXXX方法来实现。
+     * 一般情况下，测试范式为：
+     * doXXXX(...).when(...).someMethod(...)
+     * 意思就是当执行someMethod时，使用doXXX的行为来代替someMethod
+     *
+     * doReturn、doThrow、doAnswer、doNothing、doCallRealMethod
+     */
+    @Test
+    fun sampleDoXXX() {
+        val mockedList = mock(mutableListOf<String?>().javaClass)
+        doThrow(RuntimeException()).`when`(mockedList).add("hello")
+
+        //抛出异常
+        mockedList.add("one")
+    }
 }
