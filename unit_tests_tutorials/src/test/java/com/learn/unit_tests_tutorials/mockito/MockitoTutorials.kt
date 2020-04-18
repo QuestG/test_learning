@@ -1,7 +1,9 @@
 package com.learn.unit_tests_tutorials.mockito
 
+import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatcher
 import org.mockito.ArgumentMatchers
 import org.mockito.Mock
@@ -313,5 +315,99 @@ class Tutorials {
 
         //抛出异常
         mockedList.add("one")
+    }
+
+    /**
+     * spy方法，为实际的对象设置别名。然后可以用别名来调用对象的方法。注意这里不是mock出来的对象。
+     *
+     * 当然，一般是不建议使用spy。除非是针对所谓的"部分模拟"，比如第三方库的接口，遗留代码的临时重构。
+     */
+    @Test
+    fun sampleSpy() {
+        //对于真实的对象，调用它的方法时，会按照实际的代码来进行判断。如果有异常则抛出异常。
+        //针对这两行已知代码，如果接着执行spy[0]，程序会抛出越界异常，因为实际的对象还没有添加任何值。
+        val linkedList = LinkedList<String>()
+        val spy = spy(linkedList)
+
+        `when`(spy.size).thenReturn(100)
+
+        //使用spy 调用实际对象的方法
+        spy.add("one")
+        spy.add("two")
+        //输出"one"
+        println(spy[0])
+        //输出"100"
+        println(spy.size)
+
+        verify(spy).add("one")
+
+        //有时，spy和when结合使用可能会出现错误，这时可考虑将when替换为doXXX方法。
+        //由于spy对应的对象还没有存储任何值，所以会抛异常。
+//        `when`(spy[0]).thenReturn("foo")
+        //对于上面的异常，应该改写为：
+        doReturn("foo").`when`(spy)[0]
+
+
+        //mockito并不会将方法的调用委托传递给实际的实例，而是创建实例的副本。
+        //所以如果通过spy来使用真实的实例，就要注意真实的实例可能出现的异常，以及实例目前真实的变量、方法逻辑等。
+        //另外，通过spy调用未打桩的方法，则不对真实实例产生任何影响。也就是说，（个人理解）从测试角度来看，没有任何意义。
+        spy.clear()
+
+        //mockito不会mock final方法，所以如果针对final method使用spy和stubbing，则意味着异常。也不应该通过verify方法来验证这些final方法。
+    }
+
+
+    @RunWith(MockitoJUnitRunner::class)
+    class SampleArgumentCaptor {
+
+        @Mock
+        private lateinit var utility: Utility
+
+        /**
+         * 对于方法的参数，如何在单元测试中验证？
+         * mockito提供了ArgumentCaptor,使用上概括来讲分为以下几步：
+         * （0）mock一个对象A，它有方法a(arg:T),其中arg表示要进行单元测试的参数，T为参数类型
+         * （1）通过ArgumentCaptor.forClass为要测试的参数类型创建一个ArgumentCaptor对象
+         * （2）通过verify来调用A对象的a方法，这时传入的参数为ArgumentCaptor的capture方法，
+         * （3）进行单元测试的验证，通过ArgumentCaptor.value获取参数的值。
+         *
+         * 比如这里的示例，为Utility的countNumberCharacter的参数count写单元测试
+         */
+        @Test
+        fun sample() {
+            val targetClass = TargetClass(utility)
+            targetClass.countNumberCharacter("this is a test", 'i')
+
+            val captor = ArgumentCaptor.forClass(Int::class.java)
+
+            verify(utility, times(1)).logToConsole(captor.capture())
+
+            assertThat(captor.value).isEqualTo(2)
+        }
+
+
+        open class TargetClass(var utility: Utility) {
+
+            /**
+             * 计算一个字符串中有多少个指定的Char
+             */
+            fun countNumberCharacter(text: String, ch: Char) {
+                val charArray = text.toCharArray()
+                var count = 0
+
+                for (char in charArray) {
+                    if (char == ch) {
+                        count++
+                    }
+                }
+                utility.logToConsole(count)
+            }
+        }
+
+        open class Utility {
+            open fun logToConsole(count: Int) {
+                println("utility count: $count")
+            }
+        }
     }
 }
