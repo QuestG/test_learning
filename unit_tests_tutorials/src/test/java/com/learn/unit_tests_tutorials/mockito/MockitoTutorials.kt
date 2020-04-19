@@ -10,6 +10,7 @@ import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.junit.MockitoJUnitRunner
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * @author quest
@@ -409,5 +410,84 @@ class Tutorials {
                 println("utility count: $count")
             }
         }
+    }
+
+    /**
+     * 正常测试情况下，不要使用这种方式测试的代码
+     *
+     * 除非是第三方接口、老旧代码的临时重构这样的情况，考虑使用partial mock。
+     */
+    @Test
+    fun samplePartialMock() {
+        //使用spy可以创建partial mock
+        val spy = spy(LinkedList::class.java)
+
+        //或者mock第三方库中的类
+        val mock = mock(SampleArgumentCaptor.Utility::class.java)
+        `when`(mock.logToConsole(1)).thenCallRealMethod()
+    }
+
+    /**
+     * reset方法重置mock对象。但一般都尽量避免使用reset，因为都是重新创建mock。如果使用reset，一般表明测试方法写的有问题。
+     */
+    @Test
+    fun sampleResetMock() {
+        val mock = mock(mutableListOf<Int>().javaClass)
+        `when`(mock.size).thenReturn(10)
+
+        mock.add(1)
+
+        reset(mock)
+    }
+
+    /**
+     * 行为驱动开发(BDD)：http://en.wikipedia.org/wiki/Behavior_Driven_Development
+     * BDD下的测试一般是三步given、when、then：
+     * （1）given: BDDMockito.given方法，获得mock的对象
+     * （2）when:
+     * （3）then:
+     *
+     * 暂时不理解BDD，以及如何对BDD进行自动化测试。
+     */
+    @RunWith(MockitoJUnitRunner::class)
+    class BDDTest
+
+    /**
+     * mock是可以序列化的，通过MockSettings.serializable(),但这个特性在单元测试中不常用
+     *
+     * 它用来处理BDD规范的特定用例，而BDD规范可能具有不可靠的外部依赖关系，主要是web环境中。
+     *
+     * MockSettings接口中定义了一些可以在mock创建对象时生效的设置。
+     */
+    @Test
+    fun sampleSerializableMock() {
+        //一般情况下但serializable mock
+        val serializableMock = mock(List::class.java, withSettings().serializable())
+
+        //对spy对象进行 serializable
+        val arrayList = ArrayList<Objects>()
+        val spy = mock(
+            ArrayList::class.java, withSettings()
+                .spiedInstance(arrayList)
+                .defaultAnswer(CALLS_REAL_METHODS)
+                .serializable()
+        )
+    }
+
+    /**
+     * timeout方法用来验证方法调用是否超时。
+     */
+    @Test
+    fun sampleTimeout() {
+        val mock = mock(mutableListOf<String>().javaClass)
+
+        //只要mock对象的某个方法调用两次的耗时在100ms以内，即测试通过
+        mock.add("hello")
+        mock.add("hello")
+        verify(mock, timeout(100).times(2)).add("hello")
+        verify(mock, timeout(100).atLeast(2)).add("hello")
+
+//        verify(mock, timeout(100)).add("hello")
+//        verify(mock, timeout(100).times(1)).add("hello")
     }
 }
