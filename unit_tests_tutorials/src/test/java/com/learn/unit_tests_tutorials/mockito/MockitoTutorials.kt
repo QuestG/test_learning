@@ -490,4 +490,69 @@ class Tutorials {
 //        verify(mock, timeout(100)).add("hello")
 //        verify(mock, timeout(100).times(1)).add("hello")
     }
+
+    @Test
+    fun sampleIgnoreStubs() {
+        val mock = mock(mutableListOf<String>().javaClass)
+        val mock1 = mock(mutableListOf<String>().javaClass)
+
+        `when`(mock.add("a")).thenReturn(true)
+        `when`(mock1.add("a")).thenReturn(false)
+
+        mock.add("a")
+//        mock1.add("a")
+
+        mock.clear()
+//        mock1.clear()
+        verify(mock).clear()
+//        verify(mock1).clear()
+
+        //这里会报NotAMockException 但我还不知道是什么原因。
+//        val ignoreStubs = ignoreStubs(mock, mock1)
+//        verifyNoMoreInteractions(ignoreStubs)
+        verifyNoMoreInteractions(ignoreStubs(mock))
+    }
+
+    /**
+     * mock的元数据，对mock本身进行描述
+     */
+    fun sampleMockingDetails() {
+        val list = mutableListOf<String>()
+        val details = mockingDetails(list)
+
+        details.mockCreationSettings.isSerializable
+        details.mockCreationSettings.defaultAnswer
+    }
+
+    //github开源库 dexMaker： A utility for doing compile or runtime code generation targeting Android's Dalvik VM
+    //默认情况下，Mockito使用ByteBuddy创建动态代理，实现了MockMaker接口类，主要是为了扩展Mockito，比如可以使用Mockito测试Android代码，参考dexMaker。
+    //BDD测试，主要通过BDDMockito的then关键字来启用BDD形式的测试验证。
+
+
+    /**
+     * spy可以对抽象类和接口使用
+     *
+     * mock也可以对抽象类使用，而且可以通过MockSetting的useConstructor设置使用哪个构造函数，可以阅读useConstructor的文档。
+     */
+    @Test
+    fun sampleSpyOrMockAbstract() {
+        val spy = spy(SomeAbstract::class.java)
+        val spy1 = spy(SomeInterface::class.java)
+
+        mock(
+            SomeAbstract::class.java, withSettings().useConstructor().defaultAnswer(
+                CALLS_REAL_METHODS
+            )
+        )
+
+        mock(
+            SomeAbstract::class.java, withSettings().useConstructor("1", 2).defaultAnswer(
+                CALLS_REAL_METHODS
+            )
+        )
+    }
+
+    abstract class SomeAbstract
+
+    interface SomeInterface
 }
