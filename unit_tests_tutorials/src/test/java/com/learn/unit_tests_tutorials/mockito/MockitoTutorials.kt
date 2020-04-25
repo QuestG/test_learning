@@ -3,12 +3,15 @@ package com.learn.unit_tests_tutorials.mockito
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.AdditionalAnswers.answer
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatcher
 import org.mockito.ArgumentMatchers
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.stubbing.Answer2
+import java.lang.reflect.ParameterizedType
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -555,4 +558,76 @@ class Tutorials {
     abstract class SomeAbstract
 
     interface SomeInterface
+
+    /**
+     *
+     * 当测试时想对void method进行stubbing，可以使用doAnswer，传入Answer对象
+     *
+     * 也就是说在mock执行指定的操作时，实际给到的返回值可以通过doAnswer来改变。
+     *
+     * 而InvocationOnMock记录了mock调用的方法以及传递给方法的参数。
+     *
+     * AdditionalAnswers是一个工厂类，它的answer和answerVoid方法可以创建Answer对象。
+     * 至于方法的参数，可以通过AnswerX来创建。
+     */
+    @Test
+    fun sampleLambda() {
+        val mock = mock(mutableListOf<String>().javaClass)
+        //每次都返回12
+        doAnswer {
+            12
+        }.`when`(mock)[0]
+
+        val answer2 =
+            doAnswer(answer(Answer2<Boolean, String, String> { arg0, arg1 -> arg0 == arg1 }))
+                .`when`(mock)
+    }
+
+
 }
+
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+annotation class MyAnnotation
+
+@MyAnnotation
+class AnnotationMeta {
+    fun hello(): List<String> {
+        return listOf("hello")
+    }
+}
+
+/**
+ * 也就是说，Mockito的mock一个对象，同时记录了该对象的上注解和范型，包括方法的范型等
+ * 这是mockito的默认行为，如果替换了MockMaker的实现，则默认行为可能不成立。
+ */
+@Test
+fun sampleAnnotationAndGeneric() {
+    val mockType = mock(AnnotationMeta::class.java).javaClass
+    assertThat(mockType.isAnnotationPresent(MyAnnotation::class.java)).isTrue()
+    assertThat(mockType.getDeclaredMethod("hello").genericReturnType).isInstanceOf(ParameterizedType::class.java)
+}
+
+/**
+ * 从Mockito 2.1.0开始，mockito提供了Incubating注解来支持对final修饰的class、enum和method进行mock。
+ * 不过，这个特性还处于验证中，属于beta版，还没有release。
+ *
+ * 关于Incubating注解的使用，很多方法都有，比如spy、InlineMockMaker
+ *
+ * 另外，mock final类型和enum 和withSettings().serializable()、withSettings().extraInterfaces()不能兼容使用
+ * 仅包内可见的java方法不可被mock，native方法不可被mock
+ *
+ * 另外，关于更多inline mock的解释可以参考InlineByteBuddyMockMaker
+ *
+ * 当一些特定场景下inline mock可能会导致内存泄漏，可以使用MockitoFramework.clearInlineMocks()来即使的清理mock state。
+ *
+ * 对于JUnit5的集成，可以使用`org.mockito:mocktio-junit-jupiter`库，更多内容需要查看该库中的MockitoExtension类。
+ *
+ * 在Mockito2，stubbing检查都是很严格的，它让测试更干脆与高效。
+ * Strict stubbing reports unnecessary stubs, detects stubbing argument mismatch and makes the tests more DRY (Strictness.STRICT_STUBS).
+ * 不过可以使用lenient来跳过strict stubbing，也可以对mock对象的所有stubbing操作都应用lenient，通过withSettings().lenient()实现。
+ *
+ * 用InstantiatorProvider2来代替InstantiatorProvider，不过它的作用是什么？
+ *
+ * 还有MockitoRule、MockitoSession等
+ */
