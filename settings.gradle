@@ -1,3 +1,4 @@
+include ':robolectric_tutorial'
 include ':unit_tests_tutorials'
 include ':local_unit_sample'
 rootProject.name = "Test_Learning"
